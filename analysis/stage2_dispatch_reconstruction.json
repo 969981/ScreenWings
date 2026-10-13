@@ -1,0 +1,70 @@
+{
+  "source_sample_sha256": "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214",
+  "stage1_sha256": "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420",
+  "date": "2026-10-13",
+  "scope": "Static read-only disassembly and an incomplete, non-native x86 model; no Windows VM",
+  "first_reloc_table": {
+    "va": "0x60976C",
+    "items": 43,
+    "bytes": 172,
+    "physical_clusters": 19,
+    "unique_e9_landings": 43,
+    "first_landing_opcode": "0x9C"
+  },
+  "second_reloc_table": {
+    "va": "0x6471D3",
+    "end_exclusive": "0x64859F",
+    "items": 1267,
+    "bytes": 5068,
+    "sha256": "2d87b174e89203dc01cb9db41c22d3b4a5738af9e4dd1918fe809dd7ed844692",
+    "unique_e9_stubs": 1267,
+    "unique_destinations": 1267,
+    "physical_clusters": 230,
+    "overlap_with_first": 0,
+    "source_file": "analysis/stage2_reloc1267.csv",
+    "cluster_file": "analysis/stage2_reloc1267_clusters.csv"
+  },
+  "bounded_static_model": {
+    "seeds": [
+      0,
+      1,
+      42
+    ],
+    "first_loop_entry_instruction_step": 2429,
+    "first_loop_exit_instruction_step": 54378,
+    "loop_enter_eax": "0x6471D3",
+    "loop_enter_ebx": "0x4F3",
+    "loop_enter_ecx": "0x400000",
+    "loop_exit_eax": "0x64859F",
+    "loop_exit_ebx": "0x0",
+    "remark": "Instruction-step numbers belong to an incomplete research model; not actual Windows executed instruction counts"
+  },
+  "dispatch1": {
+    "context_base": "0x4C19BC",
+    "virtual_ip_field_offset": "0x22",
+    "table_field_offset": "0x52",
+    "virtual_ip": "0x4AAD06",
+    "selector": 803,
+    "selector_scaled": 3212,
+    "entry_va": "0x647E5F",
+    "thunk_va": "0x4F464D",
+    "destination_va": "0x4DB0E0",
+    "stream_delta": "0x000BF0BD",
+    "next_virtual_ip": "0x569DC3",
+    "native_indirect_branch": "0x541ED7 JMP EDX"
+  },
+  "dispatch2": {
+    "handler_va": "0x4DB0E0",
+    "context_field_to_store_esp": "0x000D",
+    "selector": 570,
+    "entry_va": "0x647ABB",
+    "thunk_va": "0x496308",
+    "destination_va": "0x5303F3",
+    "stream_delta": "0xFFF7A1AF",
+    "next_virtual_ip": "0x4E3F72",
+    "native_indirect_branch": "0x4DB13A JMP EDX"
+  },
+  "interpretation": "A protection-layer virtualized instruction stream / threaded interpreter is supported. Exact WinLicense VM instruction semantics and normal application OEP not recovered.",
+  "anti_capture_API_proof": "none",
+  "runtime_logs": "none"
+}
