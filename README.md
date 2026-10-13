@@ -107,7 +107,7 @@ The 43-row dataset is checked into [analysis/stage2_jump_thunks.csv](analysis/st
 
 ## 2026-10-13: 43-thunk inbound-consumer analysis
 
-Byte-verified sorting reveals **19 physical clusters** (3 groups of four E9 thunks, 15 pairs, 1 singleton), not 43 independent functions. **13 cluster heads** follow `FF E0..E7` indirect `JMP reg` instructions, and all thirteen share a `+0x22` memory-update template before the jump.
+Byte-verified sorting reveals **19 physical clusters** (3 groups of four E9 thunks, 15 pairs, 1 singleton), not 43 independent functions. **13 cluster heads** follow `FF E0..E7` indirect `JMP reg` instructions, and all thirteen share a `+0x22` memory-update template before the jump. However, the whole-image control scan found **1,167 other raw matches to this template** out of 3,645 `FF E0..E7` byte sequences: the template is generic obfuscation and must not be attributed to anti-screenshot code.
 
 A read-only whole-section scan did **not** identify a validated direct relative branch *into* the 43 thunk addresses. Two short-Jcc candidate byte sequences are not established callers (one is inside an immediate operand; the other is apparent data). These negative results do not eliminate dynamically constructed indirect transfers.
 
