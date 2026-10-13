@@ -92,3 +92,14 @@ Ran the local first-stage bytes through a bounded, no-execution branch tracer. T
 - [Windows VM validation method](docs/runtime-capture-validation.md)
 
 **Not a runtime proof:** this execution environment is Linux and does not offer a Windows VM or access to a running ScreenWings process. No actual HWND, `SetWindowDisplayAffinity` flag, user32 caller or screen capture result has been collected. A matching negative static API string scan cannot disprove dynamic API resolution.
+
+## Stage-two branch-thunk table verified (2026-10-13)
+
+A static reconstruction extended the 20-instruction bootstrap into its initialized protection code. In the verified first-stage image:
+
+- `0x65E1F6`: `LOCK CMPXCHG` at the computed `0x5AD7F7` memory location; initial value is zero, with a `PAUSE` retry path.
+- `0x65E4CC`/`0x65E4EE`: derives `0xAC/4=43` entries.
+- `0x65E530`: `ADD DWORD PTR [EAX], ECX` rebases a 43-entry DWORD table at `0x60976C` by the original PE ImageBase `0x400000`.
+- Every rebased address begins with an `E9 rel32` x86 near jump, and **all 43** resolve to **distinct `PUSHF` landing blocks**. **21** pairs of neighboring thunk locations differ by exactly 5 bytes.
+
+The 43-row dataset is checked into [analysis/stage2_jump_thunks.csv](analysis/stage2_jump_thunks.csv), together with [the byte-validating extractor](tools/extract_stage2_jump_thunks.py) and [technical write-up](docs/stage2-jump-thunk-table.md). CI has been updated to regenerate these files only when an authorized exact-match sample is available. This is a discovery of a protected control-flow structure, **not proof** of a screenshot-blocking API.
