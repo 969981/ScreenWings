@@ -37,3 +37,22 @@ See [the workflow](.github/workflows/reverse-screenwings.yml) for automated REA 
 - REA/Ghidra now analyze a **reconstructed stage-one PE image** with populated `schiffer` bytes and entry RVA `0x30909A`, not merely the packed stub. This is not the original unprotected business executable.
 - Stage-two WinLicense runtime behaviors, encrypted API names and any virtualized business logic still need to be resolved. No program execution occurs in CI.
 - Third-party files and assets remain subject to the original authors' licenses. Only publish a full payload dump if redistribution is authorized.
+
+
+## Fixing the GitHub Actions missing-sample failure
+
+Actions triggered by edits to workflow/tool source previously failed within seconds because the repository did not contain `samples/ScreenWings.exe`. The workflow now starts **only** on pushes to `samples/ScreenWings.exe` or explicit `workflow_dispatch`. Editing documents or tools will no longer trigger a specimen-dependent job.
+
+For an authorized public sample upload (PowerShell 7 and GitHub CLI):
+
+```powershell
+pwsh -File .\tools\publish_sample.ps1 -Sample "C:\path\to\ScreenWings.exe" -ConfirmYouMayRedistribute
+```
+
+That script verifies the exact SHA-256 before committing the **original, unchanged file**. This action publicly redistributes a third-party executable; do not run without permission. As an alternative, manually dispatch Actions with a legally hosted HTTPS `sample_url` and exact expected SHA-256. The workflow intentionally fails with a clear message if neither a checked-in sample nor a supplied URL is present.
+
+After a verified sample is available, use the workflow's manual run with `publish_extracted=true` only if redistribution of the extraction outputs is authorized. Raw stage-one extraction continues even if an optional deep REA decompilation reports errors; logs and offline artifacts are uploaded when available.
+
+## Capture-prevention function-level validation
+
+The verified static stage-one control flow and read-only Windows instrumentation are documented in [runtime capture validation](docs/runtime-capture-validation.md). Run `tools/observe_windows.py` and optional `tools/capture_trace.frida.js` only in a disposable Windows VM. These tools can correlate owned HWNDs, `WDA_MONITOR`/other flags, topmost/layered windows, and dynamic API resolution; **there is still no first-hand runtime proof that this version calls `SetWindowDisplayAffinity`**.
