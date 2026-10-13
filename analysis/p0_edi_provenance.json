@@ -1,0 +1,67 @@
+{
+  "stage1_sha256": "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420",
+  "original_sample_sha256": "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214",
+  "classification": "Conditional static model only; native Windows EDI value has NOT been measured.",
+  "model_context_base": "0x4C19BC",
+  "model_eax_before_first_sub": "0x7AEC651F",
+  "first_sub": {
+    "instruction_va": "0x5C3000",
+    "operand": "[CTX+0x7E]",
+    "operand_value": "0xE8480977",
+    "eax_result": "0x92A45BA8"
+  },
+  "second_sub": {
+    "instruction_va": "0x5C3033",
+    "operand": "[CTX+0x09]",
+    "operand_value": "0x92A45B90",
+    "eax_result": "0x00000018"
+  },
+  "stores": [
+    {
+      "instruction": "0x5C30B8",
+      "memory": "CTX+0x7A / 0x4C1A36",
+      "value": "0x00000018"
+    },
+    {
+      "instruction": "0x5C3118",
+      "operation": "ESI := [CTX+0x7A]",
+      "result": "0x00000018"
+    },
+    {
+      "instruction": "0x5C3123",
+      "memory": "CTX+0x3B / 0x4C19F7",
+      "value": "0x00000018"
+    },
+    {
+      "instruction": "0x53D2ED",
+      "operation": "EDI := [CTX+0x3B]",
+      "result": "0x00000018"
+    },
+    {
+      "instruction": "0x53D2EF",
+      "operation": "EDI := [EDI]",
+      "reads_from": "0x00000018",
+      "result": "Unmapped in bounded research model"
+    }
+  ],
+  "whole_trace_write_count": 37,
+  "localized_opcode_sites_verified": 8,
+  "modeled_branch_sensitivity": [
+    {
+      "branch": "0x5C2F65 JBE",
+      "forced_not_taken": true,
+      "model_outcome": "still reaches deref of 0x18",
+      "caveat": "forced path is hypothetical, not evidence of runtime branch"
+    },
+    {
+      "branch": "0x53D0D9 JBE",
+      "forced_not_taken": true,
+      "model_outcome": "still reaches deref of 0x18",
+      "caveat": "forced path is hypothetical, not evidence of runtime branch"
+    }
+  ],
+  "conclusion": "CTX+0x3B has a confirmed model writer; the failure is a model-consistency issue, not simply an uninitialized context field. Do not trust modeled post-stop control flow.",
+  "real_windows_process_sample": false,
+  "proven_business_oep": false,
+  "SetWindowDisplayAffinity_proven": false
+}
