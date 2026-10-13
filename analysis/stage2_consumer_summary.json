@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-13",
+  "source": "Restored schiffer VA=0x492000 length=0x672000",
+  "input_sha256": "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420",
+  "thunk_table_va": "0x60976C",
+  "thunk_count": 43,
+  "distinct_PUSHF_landings": 43,
+  "physical_clusters": 19,
+  "physical_cluster_sizes": {
+    "1": 1,
+    "2": 15,
+    "4": 3
+  },
+  "clusters_immediately_after_register_jmp": 13,
+  "direct_relative_branch_candidates_into_thunk_starts": 0,
+  "raw_relative_branch_candidates_into_landings": 45,
+  "validated_thunk_to_landing_relative_jumps": 43,
+  "not_verified_raw_short_jcc_candidates": [
+    {
+      "source_va": "0x60658D",
+      "target_va": "0x606510",
+      "observation": "opcode-like bytes lie within the immediate operand of MOV ESI,0x77E788A1"
+    },
+    {
+      "source_va": "0x644584",
+      "target_va": "0x644586",
+      "observation": "opcode-like bytes lie in apparent UTF-16/data adjacent to a known landing; no reachable instruction entry confirmed"
+    }
+  ],
+  "full_image_raw_register_jump_matches": 3645,
+  "full_image_raw_plus_0x22_memory_add_jump_matches": 1167,
+  "qualifications": [
+    "Raw opcode patterns are not proof of valid decoded instructions or feasible control flow.",
+    "No literal fully rebased thunk addresses were found, but indirect/dynamic uses remain possible.",
+    "The +0x22 pattern occurs broadly and is not evidence of screenshot behavior.",
+    "No program runtime, Windows HWND observation, capture method or SetWindowDisplayAffinity call was executed."
+  ],
+  "reproducible_script": "tools/scan_stage2_thunk_consumers.py",
+  "full_clusters": "analysis/stage2_thunk_clusters.csv",
+  "technical_note": "docs/stage2-thunk-consumers.md"
+}
