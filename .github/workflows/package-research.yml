@@ -1,0 +1,100 @@
+name: Package ScreenWings Stage-1 Research
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_url:
+        description: "Optional HTTPS EXE/ZIP source; blank uses historical vendor URL"
+        required: false
+        type: string
+      upload_release:
+        description: "Upload complete package as GitHub Release asset"
+        required: true
+        default: false
+        type: boolean
+      confirm_public_redistribution:
+        description: "I have permission to redistribute the original and recovered executable bytes"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SAMPLE_URL: ${{ inputs.sample_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Acquire exact hashed original and extract sections
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p samples analysis/extracted analysis/stage1 analysis/disassembly
+          if [ -n "$SAMPLE_URL" ]; then
+            python tools/resolve_sample.py --sample samples/ScreenWings.exe --url "$SAMPLE_URL"
+          else
+            python tools/resolve_sample.py --sample samples/ScreenWings.exe
+          fi
+          python tools/pe_unpack.py samples/ScreenWings.exe --out analysis/extracted
+          python tools/unpack_stage1.py samples/ScreenWings.exe --out analysis/stage1
+          test "$(sha256sum analysis/stage1/schiffer_stage1.bin | cut -d' ' -f1)" = "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420"
+      - name: Extract readable disassembly without executing the sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          objdump -D -Mintel --start-address=0x70909a --stop-address=0x709200 analysis/stage1/ScreenWings_stage1_for_Ghidra_DO_NOT_RUN.exe > analysis/disassembly/stage1-entry.txt
+          objdump -D -Mintel -j .text analysis/stage1/embedded/Oreans_TlsHelperXBundler_candidate_pe.bin > analysis/disassembly/embedded-tls-helper.txt
+          objdump -x analysis/stage1/embedded/Oreans_TlsHelperXBundler_candidate_pe.bin > analysis/disassembly/embedded-tls-helper-headers.txt
+      - name: Create complete ZIP and SHA256 inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,pathlib,zipfile
+          paths = [pathlib.Path(k) for k in ('samples','analysis','tools','docs')]
+          files=sorted(f for folder in paths if folder.exists() for f in folder.rglob('*') if f.is_file())
+          files.append(pathlib.Path('README.md'))
+          manifest={'version':'ScreenWings 2.16.1430 stage-one static analysis',
+                    'source_sha256':'481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214',
+                    'stage1_sha256':'2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420',
+                    'notes':'Raw first-stage recovery only; second-stage Oreans protection remains; do not execute reconstructed PE',
+                    'files':[{'path':str(f),'bytes':f.stat().st_size,
+                              'sha256':hashlib.sha256(f.read_bytes()).hexdigest()} for f in files]}
+          pathlib.Path('analysis/RESEARCH_MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          with zipfile.ZipFile('screenwings-stage1-research.zip','w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as output:
+            for f in files+[pathlib.Path('analysis/RESEARCH_MANIFEST.json')]:
+              output.write(f,arcname=str(f))
+          PY
+          sha256sum screenwings-stage1-research.zip | tee research-bundle.sha256
+          unzip -t screenwings-stage1-research.zip | tail -1
+      - name: Upload complete offline bundle as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenwings-stage1-research
+          path: |
+            screenwings-stage1-research.zip
+            research-bundle.sha256
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish to GitHub Release (authorization required)
+        if: ${{ inputs.upload_release && inputs.confirm_public_redistribution }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=research-stage1-20261013
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" screenwings-stage1-research.zip research-bundle.sha256 --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" screenwings-stage1-research.zip research-bundle.sha256 \
+              --repo "$GITHUB_REPOSITORY" --title "ScreenWings stage-one reverse-engineering research" \
+              --notes "Complete reproducible aPLib static recovery from an exactly SHA256-verified sample. Original sample and reconstructed PE are third-party material. Oreans stage two and capture-blocking API are not yet proven."
+          fi
