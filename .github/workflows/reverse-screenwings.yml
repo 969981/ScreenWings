@@ -138,7 +138,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
       - name: Commit raw extracted artifacts to this repository
-        if: ${{ success() && github.event_name == 'workflow_dispatch' && inputs.publish_extracted }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.publish_extracted && hashFiles('analysis/stage1/report.json') != '' }}
         shell: bash
         run: |
           set -euo pipefail
