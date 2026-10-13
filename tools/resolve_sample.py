@@ -6,8 +6,8 @@ import argparse, hashlib, io, pathlib, urllib.request, zipfile
 
 EXPECTED="481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214"
 MAX_BYTES=100*1024*1024
-# Historical vendor URL; it may become unavailable/change. Exact hash is required.
-VENDOR_URL="https://schiffer.tech/software/screenwings/dl.php"
+# No implicit remote URL: the historical vendor endpoint returned a non-EXE/non-ZIP
+# response in GitHub Actions run #4, so choosing it without consent is unreliable.
 
 def extract(b):
     if b[:2] == b"MZ":
@@ -29,11 +29,12 @@ def extract(b):
 def main():
     a=argparse.ArgumentParser()
     a.add_argument("--sample",type=pathlib.Path,default=pathlib.Path("samples/ScreenWings.exe"))
-    a.add_argument("--url",default=VENDOR_URL)
+    a.add_argument("--url",default=None)
     args=a.parse_args()
     if args.sample.exists():
         data=args.sample.read_bytes()
     else:
+        if not args.url: raise ValueError("No original specimen present. Add samples/ScreenWings.exe or pass --url HTTPS_DIRECT_DOWNLOAD (checksum verified).")
         if not args.url.startswith("https://"): raise ValueError("Only HTTPS URL permitted")
         req=urllib.request.Request(args.url,headers={"User-Agent":"ScreenWings-research/1.0"})
         with urllib.request.urlopen(req,timeout=60) as response:
