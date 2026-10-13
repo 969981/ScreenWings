@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-13",
+  "specimen_sha256": "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214",
+  "stage1_sha256": "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420",
+  "scope": "Read-only raw-byte inspection and strictly bounded, model-seeded x86 subset interpretation; not Windows native execution",
+  "prior_dispatch": [
+    {
+      "index": 803,
+      "stub": "0x4F464D",
+      "handler": "0x4DB0E0"
+    },
+    {
+      "index": 570,
+      "stub": "0x496308",
+      "handler": "0x5303F3"
+    },
+    {
+      "index": 893,
+      "stub": "0x4F4CF5",
+      "handler": "0x593011"
+    }
+  ],
+  "new_dispatch": [
+    {
+      "kind": "RET via constructed stack slot",
+      "instruction": "0x593508",
+      "index": 1059,
+      "table_slot": "0x64825F",
+      "stub": "0x4D289F",
+      "handler": "0x5C2E23",
+      "vip_before": "0x4A1366",
+      "vip_after": "0x5974F1"
+    },
+    {
+      "kind": "JMP EDX",
+      "instruction": "0x5C32F3",
+      "model_index": 518,
+      "table_slot": "0x6479EB",
+      "stub": "0x4C1B9A",
+      "handler": "0x53CE97",
+      "vip_before": "0x5974F1",
+      "vip_after": "0x4A1370"
+    }
+  ],
+  "bounded_model": {
+    "instructions_or_thunks": 852,
+    "branches": [
+      {
+        "address": "0x593114",
+        "taken": true
+      },
+      {
+        "address": "0x5C2F65",
+        "taken": true
+      },
+      {
+        "address": "0x53D0D9",
+        "taken": true
+      }
+    ],
+    "writes": {
+      "VM_context": 32,
+      "synthetic_stack": 5,
+      "other": 0
+    },
+    "last_admitted": "0x53D2ED",
+    "stop": "0x53D2EF",
+    "stop_detail": "The second consecutive MOV EDI,[EDI] attempts a read from 0x18 under current model; context/register seed cannot be trusted further. Do not follow later predictions.",
+    "assumptions": [
+      "After handler570 the context+0x7E is zero",
+      "Stage2 1267 table entries already rebased",
+      "The 0x593011 register seed is derived from handler570 ending",
+      "Only a subset of x86 opcodes and flags is implemented",
+      "Simulated stack mapped at 0x7FFF0000 is not a Windows stack"
+    ]
+  },
+  "conclusion": "The observed RET is a VM-dispatch mechanism, not the original program entry. No cross-protector handoff or executable-page decryption observed within bounded model; absence beyond cutoff cannot be inferred.",
+  "windows_runtime_available": false,
+  "api_SetWindowDisplayAffinity_verified": false
+}
