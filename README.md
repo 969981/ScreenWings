@@ -1,6 +1,6 @@
 # ScreenWings reverse-engineering research
 
-Static and reproducible analysis of a supplied ScreenWings Windows executable, using [REA](https://github.com/morluto/rea) with Ghidra and a zero-dependency Python PE extractor.
+Static and reproducible analysis of a supplied ScreenWings Windows executable, using [REA](https://github.com/morluto/rea) with Ghidra and a zero-dependency Python PE extractor and a verified first-stage aPLib decompressor.
 
 ## Target identity
 
@@ -17,21 +17,23 @@ The target has a high-entropy `.boot` section with its entry point inside an app
 
 ## Usage
 
-The specimen is not redistributed by default. Provide your legally obtained specimen at `samples/ScreenWings.exe`, or dispatch the GitHub Actions workflow with an HTTPS sample URL, and check that its SHA-256 equals the expected digest above.
+The specimen is not redistributed by default. Provide your legally obtained specimen at `samples/ScreenWings.exe`, or run the GitHub Actions workflow. The workflow now attempts the historical vendor download (EXE or ZIP), verifies the exact SHA-256, and fails closed if the historical version is unavailable. The specimen is never executed.
 
 ```bash
+python3 tools/resolve_sample.py --sample samples/ScreenWings.exe
 python3 tools/pe_unpack.py samples/ScreenWings.exe --out analysis/extracted
+python3 tools/unpack_stage1.py samples/ScreenWings.exe --out analysis/stage1
 ```
 
 See [the workflow](.github/workflows/reverse-screenwings.yml) for automated REA + Ghidra processing, file extraction, manifests, analysis artifacts and optional publishing of extracted results. **Do not run the protected program in a regular workstation or CI runner.** This workflow uses static analysis only.
 
 ## Findings
 
-Read [ScreenWings protection investigation](docs/protection-mechanism.md). The mechanism is an evidence-based **working hypothesis**, not yet a function-level reconstruction: some public testing suggests `SetWindowDisplayAffinity`, but the packed sample's import table does not expose it. A full claim requires the unpacked code, the window creation / display affinity call arguments, and a Windows capture-method comparison.
+**Stage one is now fully recovered.** The aPLib-compatible bootstrap restores exactly **6,758,400 bytes** into `schiffer`, SHA-256 `2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420`, and reaches stage-one entry `0x70909A`. The remaining Oreans/WinLicense protection has not been lifted. Read [the stage-one technical analysis](docs/stage1-unpack-technical.md) and [ScreenWings protection investigation](docs/protection-mechanism.md). The mechanism is an evidence-based **working hypothesis**, not yet a function-level reconstruction: some public testing suggests `SetWindowDisplayAffinity`, but the packed sample's import table does not expose it. A full claim requires the unpacked code, the window creation / display affinity call arguments, and a Windows capture-method comparison.
 
 ## Scope and limitations
 
 - Raw PE sections, resources, overlay, signature, import metadata and strings can be extracted without running the specimen.
-- REA/Ghidra initially analyze the **packed stub**, not automatically the decrypted business code.
-- Dynamic in-memory unpacking must occur in a separate sandbox with appropriate authorization and is not attempted by this CI workflow.
+- REA/Ghidra now analyze a **reconstructed stage-one PE image** with populated `schiffer` bytes and entry RVA `0x30909A`, not merely the packed stub. This is not the original unprotected business executable.
+- Stage-two WinLicense runtime behaviors, encrypted API names and any virtualized business logic still need to be resolved. No program execution occurs in CI.
 - Third-party files and assets remain subject to the original authors' licenses. Only publish a full payload dump if redistribution is authorized.
