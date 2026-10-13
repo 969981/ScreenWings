@@ -52,3 +52,19 @@ REA requires a configured Ghidra installation and does not itself decrypt a cust
 ## Reproduction caution
 
 Do not execute the specimen on a host workstation or GitHub-hosted runner. A static PE scanner and a read-only Ghidra import do not require program execution. Runtime experiments require a disposable, offline, snapshotted VM and an explicit safety review. Respect the executable publisher's rights before publicly redistributing its raw binary assets.
+
+
+## Stage-one update (2026-10-13)
+
+The complete `schiffer` region has been recovered with an aPLib-compatible decoder, and the static-analysis OEP is `0x70909A`. See [the stage-one technical guide](stage1-unpack-technical.md). Additional Oreans / WinLicense components and heavily obfuscated branch paths remain. No literal ASCII/UTF-16 match for `SetWindowDisplayAffinity` or `CreateWindowEx` was observed in the recovered first-stage binary. This is a negative **string** search, not proof that their runtime calls do not exist.
+
+### Windows display-affinity hypothesis — important version distinction
+
+Microsoft's official documentation: [SetWindowDisplayAffinity (winuser.h)](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity).
+
+- `WDA_MONITOR = 0x1` is supported on Windows 7 and later: protected top-level-window contents appear without content in supported captures.
+- `WDA_EXCLUDEFROMCAPTURE = 0x11` is supported starting Windows 10 version 2004 (older Windows treats the value as `WDA_MONITOR`).
+- The `HWND` must belong to the calling process and be top-level; DWM desktop composition is required.
+- The sample's April 2020 build timestamp and documented Windows 7 support make `WDA_MONITOR` an especially relevant **test candidate**, not a proven argument. The actual constant must be observed in the unpacked application call.
+
+An overlay strategy would additionally require evidence of ownership, coverage of the monitor rectangle, layered/transparency or topmost behavior, and the corresponding protected HWND. Plain use of `SetWindowDisplayAffinity` on a small application window does not independently explain whole-desktop black captures. Alternative hook/capture strategies remain open until real callsite and runtime HWND data are obtained.
