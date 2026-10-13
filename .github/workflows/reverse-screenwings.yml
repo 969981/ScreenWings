@@ -92,6 +92,8 @@ jobs:
           set -euo pipefail
           python tools/extract_stage2_jump_thunks.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2_thunks
           python tools/scan_stage2_thunk_consumers.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2-consumers
+          python tools/extract_stage2_reloc1267.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2_reloc1267
+          python tools/verify_stage2_dispatch.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2_reloc1267/dispatch_verified.json
           python -m json.tool analysis/stage2_thunks/stage2_jump_thunks.json >/dev/null
       - name: Install REA 6.4.0 and Ghidra 12.1.4
         shell: bash
@@ -133,7 +135,7 @@ jobs:
         run: |
           mkdir -p analysis
           if [[ -f analysis/extracted/manifest.json ]]; then
-            (cd analysis && zip -qr "$RUNNER_TEMP/screenwings-pe-raw.zip" extracted rea stage1 stage2_thunks stage2-consumers)
+            (cd analysis && zip -qr "$RUNNER_TEMP/screenwings-pe-raw.zip" extracted rea stage1 stage2_thunks stage2-consumers stage2_reloc1267)
             cp "$RUNNER_TEMP/screenwings-pe-raw.zip" analysis/screenwings-pe-raw.zip
           fi
       - name: Upload research archive and REA logs
@@ -149,13 +151,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -n "$(find analysis/extracted analysis/rea analysis/stage1 analysis/stage2_thunks analysis/stage2-consumers -type f -size +95M -print -quit)" ]]; then
+          if [[ -n "$(find analysis/extracted analysis/rea analysis/stage1 analysis/stage2_thunks analysis/stage2-consumers analysis/stage2_reloc1267 -type f -size +95M -print -quit)" ]]; then
             echo "::warning::Large files not committed; download artifact instead."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f analysis/extracted analysis/rea analysis/stage1 analysis/stage2_thunks analysis/stage2-consumers
+          git add -f analysis/extracted analysis/rea analysis/stage1 analysis/stage2_thunks analysis/stage2-consumers analysis/stage2_reloc1267 analysis/stage2_reloc1267
           if git diff --cached --quiet; then
             echo "Nothing to commit"
           else
