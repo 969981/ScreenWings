@@ -1,0 +1,42 @@
+{
+  "sample_sha256": "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214",
+  "restored_stage1_sha256": "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420",
+  "restored_bytes": 6758400,
+  "packed_entry_va": "0xB04108",
+  "stage1_entry_va": "0x70909A",
+  "stage1_entry_rva": "0x30909A",
+  "stage1_oep_hex_prefix": "55e9e02504005de933d6f2ff080000000c0000001973e9625d2b00e9fc422400",
+  "compressed_data_file_offset": "0x58C9F",
+  "compressed_data_bytes_consumed": 3779275,
+  "compressed_data_bytes_remaining_in_boot": 150,
+  "largest_backref_offset": 91902,
+  "operations": {
+    "single_byte_or_zero": 158659,
+    "short_match": 80755,
+    "literal": 1731384,
+    "long_match": 550827,
+    "reuse_offset": 68539,
+    "end_marker": 1
+  },
+  "embedded_pe": {
+    "offset_in_restored_section": "0x2664C",
+    "machine": "x86",
+    "sections": [
+      ".text",
+      ".rdata",
+      ".data",
+      ".tls",
+      ".CRT",
+      ".rsrc",
+      ".reloc"
+    ],
+    "note": "TLS/helper component linked to Oreans packaging; not established as the application's own core logic"
+  },
+  "screenshot_defense": {
+    "SetWindowDisplayAffinity": "not_verified",
+    "CreateWindowEx": "not_verified",
+    "BitBlt": "not_verified",
+    "runtime_stage2": "not_recovered"
+  },
+  "rea_ghidra_status": "CI workflow configured, current-run results not yet observed"
+}
