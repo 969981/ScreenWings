@@ -20,9 +20,6 @@ on:
   push:
     paths:
       - "samples/ScreenWings.exe"
-      - ".github/workflows/reverse-screenwings.yml"
-      - "tools/unpack_stage1.py"
-      - "tools/resolve_sample.py"
 
 permissions:
   contents: write
@@ -62,10 +59,13 @@ jobs:
           mkdir -p samples analysis/rea analysis/extracted
           # Vendor download may be a ZIP; the resolver searches for the exact
           # uploaded specimen digest, never trusting only the published version.
-          if [[ -n "$INPUT_URL" ]]; then
+          if [[ -f "$SAMPLE" ]]; then
+            python tools/resolve_sample.py --sample "$SAMPLE" 2>&1 | tee analysis/rea/sample_source.log
+          elif [[ -n "$INPUT_URL" ]]; then
             python tools/resolve_sample.py --sample "$SAMPLE" --url "$INPUT_URL" 2>&1 | tee analysis/rea/sample_source.log
           else
-            python tools/resolve_sample.py --sample "$SAMPLE" 2>&1 | tee analysis/rea/sample_source.log
+            echo "::error::No checked-in specimen. The default historical vendor URL may have changed. Publish the verified EXE to samples/ScreenWings.exe (only when authorized), or supply sample_url in a manual dispatch." | tee analysis/rea/sample_source.log
+            exit 2
           fi
           echo "${EXPECTED_SHA256}  ${SAMPLE}" | sha256sum --check --status || {
             echo "::error::Input specimen SHA256 mismatch; refusing to analyze."
