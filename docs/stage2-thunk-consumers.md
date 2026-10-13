@@ -22,6 +22,8 @@ Sorting the 43 RVA-rebased `E9 rel32` addresses **by code VA**, rather than enum
 
 The earlier reported *21 adjacent +5 pairs* counted only neighboring entries **in table order**; it did not group all neighbors by their physical code addresses. Both counts are true, but answer different questions. Every one of the 43 E9 destinations still begins with a `PUSHF` byte (`0x9C`).
 
+**Frequency-control correction (important):** extending the same byte-pattern search to the whole restored section finds **3,645** raw occurrences of `FF E0..E7`; **1,167** also match an immediate `0x22`, a memory `ADD`, and a following indirect jump within the tested 16-byte window. These are **unvalidated raw-byte candidates**—many are likely the widespread code-obfuscation boilerplate and some may not be reachable instructions. Thus the 13-of-13 signature is real, but **not unique to the 43 thunk table or evidence of a screenshot-related object field**. Give higher priority to the protector-to-application control transfer and actual API resolution than to generic `+0x22` templates.
+
 **13/19 code clusters** have the exact two bytes `FF E0` … `FF E7` immediately before their first jump stub, encoding an unconditional `JMP r32`. Examples:
 
 ```asm
@@ -86,7 +88,7 @@ The scanner is read-only, checks the SHA-256 before analysis, emits `consumer_sc
 
 ## Next work: identify real consumers, not just catalog more thunks
 
-Start with the **13 sites implementing the shared `+0x22` memory write followed by `JMP reg`** and the **three quadruple groups** `0x494140`, `0x499B94`, `0x52B698`. For each, track how the branch-register value is constructed and whether it is sourced from the rebased `0x60976C` table, a computed pointer, or a runtime-modified memory cell. Distinguish code bytes from encrypted payload/data using valid control-flow entry points.
+Use the **13 sites implementing the shared `+0x22` write / `JMP reg` boilerplate** to calibrate and understand the obfuscator, but do not assume they are application-specific. Prioritize locating the post-protector dispatch and inspect the **three quadruple groups** `0x494140`, `0x499B94`, `0x52B698`. For each, track how the branch-register value is constructed and whether it is sourced from the rebased `0x60976C` table, a computed pointer, or a runtime-modified memory cell. Distinguish code bytes from encrypted payload/data using valid control-flow entry points.
 
 Only once a reachable non-protector path is found should we link Windows business functionality: native `CreateWindowExA/W`, `SetWindowDisplayAffinity`, `GetProcAddress` resolution, HWND ownership and display-affinity flags. A confirmed real Windows invocation inside an isolated VM remains necessary to close the specific screenshot-prevention mechanism.
 
