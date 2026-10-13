@@ -1,0 +1,109 @@
+{
+  "specimen": {
+    "filename": "ScreenWings.exe",
+    "sha256": "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214",
+    "size_bytes": 4159512,
+    "architecture": "x86",
+    "pe": "PE32",
+    "entry_rva": "0x704108",
+    "entry_va": "0xB04108",
+    "clr_runtime_directory_present": false
+  },
+  "image": {
+    "sections": [
+      {
+        "index": 0,
+        "name": "unnamed",
+        "rva": "0x2000",
+        "raw_offset": "0x400",
+        "size": 345088,
+        "entropy": 7.9673
+      },
+      {
+        "index": 1,
+        "name": "unnamed",
+        "rva": "0x86000",
+        "raw_offset": "0x54800",
+        "size": 7168,
+        "entropy": 7.9094
+      },
+      {
+        "index": 2,
+        "name": "unnamed",
+        "rva": "0x8A000",
+        "raw_offset": "0x56400",
+        "size": 512,
+        "entropy": 4.3568
+      },
+      {
+        "index": 3,
+        "name": ".idata",
+        "rva": "0x8C000",
+        "raw_offset": "0x56600",
+        "size": 512,
+        "entropy": 1.1486
+      },
+      {
+        "index": 4,
+        "name": ".rsrc",
+        "rva": "0x8E000",
+        "raw_offset": "0x56800",
+        "size": 8704,
+        "entropy": 7.0915
+      },
+      {
+        "index": 5,
+        "name": "schiffer",
+        "rva": "0x92000",
+        "raw_offset": "0x58A00",
+        "size": 0,
+        "entropy": 0
+      },
+      {
+        "index": 6,
+        "name": ".boot",
+        "rva": "0x704000",
+        "raw_offset": "0x58A00",
+        "size": 3780096,
+        "entropy": 7.9538
+      }
+    ],
+    "static_imports": {
+      "kernel32.dll": [
+        "GetModuleHandleA"
+      ],
+      "mscoree.dll": [
+        "_CorExeMain"
+      ]
+    },
+    "resource_leaf_count": 4,
+    "resource_sizes": [
+      5879,
+      20,
+      904,
+      1132
+    ],
+    "ascii_utf16_string_match_count": 6018,
+    "overlay_start": "0x3F3800",
+    "overlay_size": 16408,
+    "security_directory_offset": "0x3F3800",
+    "security_directory_size": 16408
+  },
+  "bootstrap": {
+    "entry_address": "0xB04108",
+    "first_call_target": "0xB04258",
+    "decoder_range": "0xB0410D..0xB04255",
+    "evidence": [
+      "bit-stream decode using add/adc on DL",
+      "repeated source-to-output byte copies",
+      "REP MOVSB copy of previously decoded bytes"
+    ],
+    "remaining": "true unpacked OEP and capture-defense implementation not yet recovered"
+  },
+  "verdict": {
+    "static_raw_extraction": "complete for enumerated PE image and resources",
+    "runtime_unpacking": "not completed",
+    "capture_api_identification": "unverified",
+    "rea_ghidra_actual_run": "not executed"
+  }
+}
