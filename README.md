@@ -116,3 +116,18 @@ A read-only whole-section scan did **not** identify a validated direct relative 
 - [Detailed 43-entry consumer investigation](docs/stage2-thunk-consumers.md)
 
 Both Actions workflows have been updated to run this scanner once they receive a matching original specimen. No Windows VM capture or verified user32 call trace is available.
+
+
+## 2026-10-13: second protection relocation table and actual dispatcher
+
+A **second RVA relocation table** was independently decoded at VA `0x6471D3`: **1,267 entries** (5,068 bytes), **230 physical E9 jump clusters**, and no overlap with the earlier 43-entry table. All 1,267 raw RVA entries point after rebasing to distinct valid `E9 rel32` instructions with distinct destinations inside the restored section.
+
+Crucially, a concrete *consumer* of this table has been traced from the second-stage bootstrap, through an instruction-stream selector **803** (`0x4AAD06` -> table entry `0x647E5F` -> thunk `0x4F464D` -> handler `0x4DB0E0`). That handler then selects entry **570** (`0x647ABB` -> `0x496308` -> handler `0x5303F3`) and updates the instruction-stream pointer. The model-derived context has pointer fields at `+0x22` and `+0x52`. This is positive evidence of **protector-side virtualized dispatch**, not yet ScreenWings' actual GUI or screenshot-protection business logic.
+
+- [Full 1,267-row CSV](analysis/stage2_reloc1267.csv)
+- [230 physical cluster records](analysis/stage2_reloc1267_clusters.csv)
+- [Reproducible stage-two large table extractor](tools/extract_stage2_reloc1267.py)
+- [Two consecutive dispatcher proof script](tools/verify_stage2_dispatch.py)
+- [Chinese technical investigation and evidence limitations](docs/stage2-virtual-dispatch-1267.md)
+
+Three initial-register seed configurations yielded the same bounded research-model loop entry/exit. The original Windows program has **not** been executed in this analysis environment; neither the original business OEP nor `SetWindowDisplayAffinity` is confirmed. Both Actions pipelines now include these static verification steps, conditional on a correct specimen being supplied.
