@@ -131,3 +131,16 @@ Crucially, a concrete *consumer* of this table has been traced from the second-s
 - [Chinese technical investigation and evidence limitations](docs/stage2-virtual-dispatch-1267.md)
 
 Three initial-register seed configurations yielded the same bounded research-model loop entry/exit. The original Windows program has **not** been executed in this analysis environment; neither the original business OEP nor `SetWindowDisplayAffinity` is confirmed. Both Actions pipelines now include these static verification steps, conditional on a correct specimen being supplied.
+
+
+## 2026-10-13 P0: non-exit RET transition identified, original OEP still unknown
+
+A limited, SHA-256-locked static x86 model advanced from the third virtualized handler to a deceptively normal-looking `RET 0` at **`0x593508`**. The return slot is deliberately populated with **`0x4D289F`** (relocation-table index **1059**), whose `E9` target is handler **`0x5C2E23`**. Thus `RET` is a *VM dispatch mechanism*, not established transfer into original application code. The following handler uses `JMP EDX` at `0x5C32F3`, table index **518**, stub **`0x4C1B9A`**, target **`0x53CE97`**.
+
+A bounded subset model tracked 852 instruction/thunk steps, 32 context writes and 5 synthetic stack writes; **zero writes outside those regions in the modeled prefix**. It stopped strictly at `0x53D2EF` upon an unmapped read from `0x18`. Do not treat predictions past that address as validated—the initial register/context state is conditional, not captured from Windows.
+
+- [P0 technical report](docs/p0-vm-ret-dispatch-and-handoff.md)
+- [Raw-byte RET/JMP verifier](tools/verify_stage2_ret_dispatch.py)
+- [Bounded model results and assumptions](analysis/p0_stage2_handoff_trace.json)
+
+Both Actions workflows now run the P0 verifier after prior stage-two steps, **only if the exact-matching specimen is available**. No native ScreenWings runtime log, original OEP, executable page decryption or screenshot-protection API has been confirmed.
