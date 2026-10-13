@@ -37,6 +37,13 @@ def verify(source):
       0x541ED5:'8b13',  # mov edx,[ebx]
       0x541ED7:'ffe2',  # jmp edx
       0x4DB0F0:'0fb717',  # movzx edx,word ptr [edi] (next handler)
+      0x4DB0F5:'8922',    # mov [edx],esp
+      0x4DB10C:'668b13',  # mov dx,word ptr [ebx]
+      0x4DB10F:'c1e202',  # shl edx,2
+      0x4DB134:'8b03',    # mov eax,[ebx]
+      0x4DB136:'01d0',    # add eax,edx
+      0x4DB138:'8b10',    # mov edx,[eax]
+      0x4DB13A:'ffe2',    # jmp edx
     }
     for addr,hexvalue in checks.items():
         expected=bytes.fromhex(hexvalue)
@@ -60,6 +67,18 @@ def verify(source):
     assert unrebased_ptr==TABLE_VA-IMAGE_BASE
     next_vip=VIP+delta
     assert next_vip==0x569DC3 and read(next_vip,1)
+    next_context_slot=u16(next_vip)
+    next_selector=u16(next_vip+2)
+    next_delta=u32(next_vip+4)
+    assert next_context_slot==0x0D and next_selector==570 and next_delta==0xFFF7A1AF
+    second_table_addr=TABLE_VA+next_selector*4
+    second_rva=u32(second_table_addr)
+    second_stub=IMAGE_BASE+second_rva
+    assert second_stub==0x496308 and read(second_stub,1)==b'\xe9'
+    second_dst=(second_stub+5+struct.unpack('<i',read(second_stub+1,4))[0])&0xffffffff
+    assert second_dst==0x5303F3
+    after_second_vip=(next_vip+next_delta)&0xffffffff
+    assert after_second_vip==0x4E3F72
     result={
       'stage1_sha256':SHA,'method':'Read-only exact-byte validation plus previously modeled runtime register/context values',
       'context_base_in_static_model':f'0x{CONTEXT_BASE:08X}',
@@ -77,6 +96,15 @@ def verify(source):
       'virtual_ip_delta_u32':f'0x{delta:08X}',
       'next_virtual_ip_model':f'0x{next_vip:08X}',
       'next_handler_reads_selector_at':f'0x{0x4DB0F0:08X}',
+      'second_dispatch':{
+        'context_save_offset':f'0x{next_context_slot:04X}',
+        'selector_u16':next_selector,
+        'table_entry_va':f'0x{second_table_addr:08X}',
+        'thunk_va':f'0x{second_stub:08X}',
+        'E9_destination':f'0x{second_dst:08X}',
+        'virtual_ip_delta':f'0x{next_delta:08X}',
+        'third_instruction_stream_pointer':f'0x{after_second_vip:08X}'
+      },
       'current_handoff_status':'PROTECTOR DISPATCH CONFIRMED; ORIGINAL APPLICATION ENTRY NOT IDENTIFIED',
       'runtime_logs':'not available'
     }
