@@ -123,6 +123,33 @@ def main():
         raise ValueError(f"Restored hash mismatch: {restored_sha}")
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "schiffer_stage1.bin").write_bytes(restored)
+    # An actual embedded x86 PE helper exists inside this first-stage image.
+    # Extract only a validated PE; incidental MZ byte pairs are NOT files.
+    embedded_offset = 0x2664c
+    lfanew = struct.unpack_from("<I", restored, embedded_offset+0x3c)[0]
+    nt2 = embedded_offset+lfanew
+    if restored[nt2:nt2+4] != b"PE\0\0":
+        raise ValueError("Expected bundled PE header not found")
+    section_count = struct.unpack_from("<H", restored, nt2+6)[0]
+    opt_size = struct.unpack_from("<H", restored, nt2+20)[0]
+    sec_table = nt2+24+opt_size
+    helper_size = struct.unpack_from("<I", restored, nt2+24+60)[0]
+    for index in range(section_count):
+        h = sec_table+40*index
+        file_size, file_offset = struct.unpack_from("<II", restored, h+16)
+        helper_size = max(helper_size, file_offset+file_size)
+    if helper_size > 1048576:
+        raise ValueError("Embedded PE helper exceeds limit")
+    helper = restored[embedded_offset:embedded_offset+helper_size]
+    folder = args.out / "embedded"
+    folder.mkdir(exist_ok=True)
+    (folder / "Oreans_TlsHelperXBundler_candidate_pe.bin").write_bytes(helper)
+    (folder / "manifest.json").write_text(json.dumps({
+        "stage1_offset": hex(embedded_offset),
+        "bytes": helper_size,
+        "sha256": hashlib.sha256(helper).hexdigest(),
+        "classification": "Oreans TLS helper candidate; native role unverified"
+    }, indent=2)+"\n")
     # Analysis-only PE, packed stub retained; never execute this reconstruction.
     modified = bytearray(sample[:boot["raw"]] + restored + sample[boot["raw"]:])
     struct.pack_into("<I", modified, sch["hdr"]+16, len(restored))
