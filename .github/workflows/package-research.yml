@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       sample_url:
-        description: "Optional HTTPS EXE/ZIP source; blank uses historical vendor URL"
+        description: "HTTPS direct link to exact specimen EXE/ZIP (or leave blank if checked into samples/)"
         required: false
         type: string
       upload_release:
@@ -37,10 +37,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p samples analysis/extracted analysis/stage1 analysis/disassembly
-          if [ -n "$SAMPLE_URL" ]; then
+          if [ -f samples/ScreenWings.exe ]; then
+            python tools/resolve_sample.py --sample samples/ScreenWings.exe
+          elif [ -n "$SAMPLE_URL" ]; then
             python tools/resolve_sample.py --sample samples/ScreenWings.exe --url "$SAMPLE_URL"
           else
-            python tools/resolve_sample.py --sample samples/ScreenWings.exe
+            echo "::error::Supply a SHA256-matching specimen in samples/ or specify an HTTPS direct download URL. Historical vendor endpoint is not a valid source."
+            exit 2
           fi
           python tools/pe_unpack.py samples/ScreenWings.exe --out analysis/extracted
           python tools/unpack_stage1.py samples/ScreenWings.exe --out analysis/stage1
