@@ -38,6 +38,8 @@ The earlier reported *21 adjacent +5 pairs* counted only neighboring entries **i
 0049414F  jmp 0x64468C     ; index 28
 ```
 
+All **13** of those `JMP r32` predecessors also share a stronger byte-verified template within the preceding 16 bytes: an immediate `0x22` added to a register, a `01 /r` (`ADD r/m32,r32`) operation on a computed memory location, and an indirect `FF E0..E7` jump. This is a concrete repeated **memory-write + computed transfer** pattern, but the object whose field is addressed with `+0x22` is not yet known. It may be a protection-layer control/context record; calling it a business object would be premature.
+
 The unconditionally dispatched register jump has no ordinary sequential fallthrough to the thunks. That makes `JMP reg`/runtime-calculated addresses and protection-mediated transitions appropriate next investigation targets, *not* proof that any `E9` is a separate business function or hook.
 
 Full sorted list: [`analysis/stage2_thunk_clusters.csv`](../analysis/stage2_thunk_clusters.csv).
@@ -84,7 +86,7 @@ The scanner is read-only, checks the SHA-256 before analysis, emits `consumer_sc
 
 ## Next work: identify real consumers, not just catalog more thunks
 
-Start with the **13 sites immediately preceded by `JMP reg`** and the **three quadruple groups** `0x494140`, `0x499B94`, `0x52B698`. For each, track how the branch-register value is constructed and whether it is sourced from the rebased `0x60976C` table, a computed pointer, or a runtime-modified memory cell. Distinguish code bytes from encrypted payload/data using valid control-flow entry points.
+Start with the **13 sites implementing the shared `+0x22` memory write followed by `JMP reg`** and the **three quadruple groups** `0x494140`, `0x499B94`, `0x52B698`. For each, track how the branch-register value is constructed and whether it is sourced from the rebased `0x60976C` table, a computed pointer, or a runtime-modified memory cell. Distinguish code bytes from encrypted payload/data using valid control-flow entry points.
 
 Only once a reachable non-protector path is found should we link Windows business functionality: native `CreateWindowExA/W`, `SetWindowDisplayAffinity`, `GetProcAddress` resolution, HWND ownership and display-affinity flags. A confirmed real Windows invocation inside an isolated VM remains necessary to close the specific screenshot-prevention mechanism.
 
