@@ -61,7 +61,7 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import hashlib,json,pathlib,zipfile
-          paths = [pathlib.Path(k) for k in ('samples','analysis','tools','docs')]
+          paths = [pathlib.Path(k) for k in ('samples','analysis','tools','docs','.github')]
           files=sorted(f for folder in paths if folder.exists() for f in folder.rglob('*') if f.is_file())
           files.append(pathlib.Path('README.md'))
           manifest={'version':'ScreenWings 2.16.1430 stage-one static analysis',
