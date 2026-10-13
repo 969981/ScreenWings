@@ -20,8 +20,6 @@ on:
   push:
     paths:
       - "samples/ScreenWings.exe"
-      - "tools/pe_unpack.py"
-      - ".github/workflows/reverse-screenwings.yml"
 
 permissions:
   contents: write
