@@ -59,7 +59,10 @@ def inspect(data):
                 last_va=f"0x{group[-1]:08X}",members=len(group),
                 entry_indices=[stubs[x] for x in group],
                 preceding_bytes=data[o-16:o].hex(),
-                immediately_after_jmp_reg=(len(prev)==2 and prev[0]==0xff and 0xe0<=prev[1]<=0xe7)))
+                immediately_after_jmp_reg=(len(prev)==2 and prev[0]==0xff and 0xe0<=prev[1]<=0xe7),
+                add22_memory_update_jump_pattern=(
+                    len(prev)==2 and prev[0]==0xff and 0xe0<=prev[1]<=0xe7
+                    and data[o-4]==0x01 and b"\x22\x00\x00\x00" in data[o-16:o-4])))
     shapes=dict(collections.Counter(str(len(g)) for g in clusters))
     if shapes!={"4":3,"2":15,"1":1}:raise ValueError("Unexpected 19-cluster shape")
     specs=[("CALL rel32",b"\xe8",1,5,None),("JMP rel32",b"\xe9",1,5,None),
@@ -100,6 +103,7 @@ def inspect(data):
     report=dict(image_sha256=SHA256,table=f"0x{TABLE:08X}",entry_count=43,
       clusters=groups,cluster_sizes=shapes,
       clusters_preceded_by_jmp_reg=sum(x["immediately_after_jmp_reg"] for x in groups),
+      clusters_with_add22_write_then_indirect_jump=sum(x["add22_memory_update_jump_pattern"] for x in groups),
       relative_branch_raw_candidates=branches,
       counts=dict(collections.Counter(x["classification"] for x in branches)),
       literal_pointer_search={
@@ -118,7 +122,7 @@ def main():
     (a.out/"consumer_scan.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
     with (a.out/"thunk_clusters.csv").open("w",encoding="utf-8",newline="") as f:
         w=csv.DictWriter(f,fieldnames=["group","first_va","last_va","members","entry_indices",
-                   "preceding_bytes","immediately_after_jmp_reg"])
+                   "preceding_bytes","immediately_after_jmp_reg","add22_memory_update_jump_pattern"])
         w.writeheader()
         for row in report["clusters"]:
             w.writerow(dict(row,entry_indices=";".join(map(str,row["entry_indices"]))))
