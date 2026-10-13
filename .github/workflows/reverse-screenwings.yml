@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       sample_url:
-        description: "HTTPS URL to an authorized ScreenWings.exe (omit when samples/ScreenWings.exe exists)"
+        description: "HTTPS EXE or ZIP; blank means historical vendor URL (SHA256 checked)"
         required: false
         type: string
       expected_sha256:
@@ -20,6 +20,9 @@ on:
   push:
     paths:
       - "samples/ScreenWings.exe"
+      - ".github/workflows/reverse-screenwings.yml"
+      - "tools/unpack_stage1.py"
+      - "tools/resolve_sample.py"
 
 permissions:
   contents: write
@@ -57,15 +60,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p samples analysis/rea analysis/extracted
-          if [[ -f "$SAMPLE" ]]; then
-            echo "Using checked-in specimen"
-          elif [[ -n "$INPUT_URL" && "$INPUT_URL" == https://* ]]; then
-            curl --fail --location --retry 2 --proto '=https' --proto-redir '=https' \
-              --max-filesize 104857600 --output "$SAMPLE" "$INPUT_URL"
-          else
-            echo "::error::Provide samples/ScreenWings.exe or workflow_dispatch sample_url (HTTPS)."
-            exit 1
-          fi
+          # Vendor download may be a ZIP; the resolver searches for the exact
+          # uploaded specimen digest, never trusting only the published version.
+          python tools/resolve_sample.py --sample "$SAMPLE" ${INPUT_URL:+--url "$INPUT_URL"}
           echo "${EXPECTED_SHA256}  ${SAMPLE}" | sha256sum --check --status || {
             echo "::error::Input specimen SHA256 mismatch; refusing to analyze."
             sha256sum "$SAMPLE"
@@ -79,6 +76,12 @@ jobs:
           set -euo pipefail
           python tools/pe_unpack.py "$SAMPLE" --out analysis/extracted
           python -m json.tool analysis/extracted/manifest.json >/dev/null
+      - name: Restore the complete schiffer section with static aPLib decompression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/unpack_stage1.py "$SAMPLE" --out analysis/stage1
+          python -m json.tool analysis/stage1/report.json >/dev/null
       - name: Install REA 6.4.0 and Ghidra 12.1.4
         shell: bash
         run: |
@@ -91,30 +94,35 @@ jobs:
           test -f "$GHIDRA_HOME/support/analyzeHeadless"
           echo "GHIDRA_INSTALL_DIR=$GHIDRA_HOME" >> "$GITHUB_ENV"
           rea --version
-      - name: REA read-only static analysis (packed program)
+      - name: REA/Ghidra static analysis of the restored stage-one image
         shell: bash
-        continue-on-error: true
         run: |
           set -uo pipefail
+          # Log command failures instead of hiding the entire REA step status.
+          restored="analysis/stage1/ScreenWings_stage1_for_Ghidra_DO_NOT_RUN.exe"
+          failed=0
           rea doctor --provider ghidra --json > analysis/rea/doctor.json 2>analysis/rea/doctor.stderr.txt
-          echo $? > analysis/rea/doctor.exitcode
-          rea analyze "$SAMPLE" --provider ghidra --json > analysis/rea/overview.json 2>analysis/rea/overview.stderr.txt
-          echo $? > analysis/rea/overview.exitcode
-          # These searches are probes, not claims of resolved call paths.
-          for query in SetWindowDisplayAffinity GetProcAddress CreateWindowExW BitBlt; do
-            rea search "$SAMPLE" "$query" --provider ghidra --json > "analysis/rea/search_${query}.json" 2> "analysis/rea/search_${query}.stderr.txt"
+          rc=$?; echo "$rc" > analysis/rea/doctor.exitcode; (( rc == 0 )) || failed=1
+          rea analyze "$restored" --provider ghidra --json > analysis/rea/restored_overview.json 2>analysis/rea/restored_overview.stderr.txt
+          rc=$?; echo "$rc" > analysis/rea/restored_overview.exitcode; (( rc == 0 )) || failed=1
+          rea decompile "$restored" 0x70909A --provider ghidra --json > analysis/rea/restored_entry.json 2>analysis/rea/restored_entry.stderr.txt
+          rc=$?; echo "$rc" > analysis/rea/restored_entry.exitcode; (( rc == 0 )) || failed=1
+          # String search can be negative because protection encrypts imports.
+          for query in SetWindowDisplayAffinity GetProcAddress CreateWindowExW BitBlt WinLicense Oreans; do
+            rea search "$restored" "$query" --provider ghidra --json > "analysis/rea/search_${query}.json" 2> "analysis/rea/search_${query}.stderr.txt"
             echo $? > "analysis/rea/search_${query}.exitcode"
           done
-          rea decompile "$SAMPLE" 0xB04108 --provider ghidra --json > analysis/rea/entrypoint.json 2>analysis/rea/entrypoint.stderr.txt
-          echo $? > analysis/rea/entrypoint.exitcode
-          exit 0
+          if (( failed )); then
+            echo "::error::One or more REA/Ghidra primary commands failed; inspect uploaded logs"
+            exit 1
+          fi
       - name: Build offline archive
         if: always()
         shell: bash
         run: |
           mkdir -p analysis
           if [[ -f analysis/extracted/manifest.json ]]; then
-            (cd analysis && zip -qr "$RUNNER_TEMP/screenwings-pe-raw.zip" extracted rea)
+            (cd analysis && zip -qr "$RUNNER_TEMP/screenwings-pe-raw.zip" extracted rea stage1)
             cp "$RUNNER_TEMP/screenwings-pe-raw.zip" analysis/screenwings-pe-raw.zip
           fi
       - name: Upload research archive and REA logs
@@ -130,13 +138,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -n "$(find analysis/extracted analysis/rea -type f -size +95M -print -quit)" ]]; then
+          if [[ -n "$(find analysis/extracted analysis/rea analysis/stage1 -type f -size +95M -print -quit)" ]]; then
             echo "::warning::Large files not committed; download artifact instead."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f analysis/extracted analysis/rea
+          git add -f analysis/extracted analysis/rea analysis/stage1
           if git diff --cached --quiet; then
             echo "Nothing to commit"
           else
