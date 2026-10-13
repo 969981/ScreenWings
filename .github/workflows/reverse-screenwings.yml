@@ -1,0 +1,147 @@
+name: ScreenWings PE extraction and REA/Ghidra
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_url:
+        description: "HTTPS URL to an authorized ScreenWings.exe (omit when samples/ScreenWings.exe exists)"
+        required: false
+        type: string
+      expected_sha256:
+        description: "Expected exact sample SHA256"
+        required: true
+        default: "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214"
+        type: string
+      publish_extracted:
+        description: "Commit complete raw extracted resources/sections (only if redistribution is authorized)"
+        required: true
+        type: boolean
+        default: false
+  push:
+    paths:
+      - "samples/ScreenWings.exe"
+      - "tools/pe_unpack.py"
+      - ".github/workflows/reverse-screenwings.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenwings-research
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SAMPLE: samples/ScreenWings.exe
+      REA_GHIDRA_STARTUP_TIMEOUT_MS: "900000"
+      EXPECTED_SHA256: ${{ inputs.expected_sha256 || '481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.11.0"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Resolve specimen and verify exact identity
+        shell: bash
+        env:
+          INPUT_URL: ${{ inputs.sample_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p samples analysis/rea analysis/extracted
+          if [[ -f "$SAMPLE" ]]; then
+            echo "Using checked-in specimen"
+          elif [[ -n "$INPUT_URL" && "$INPUT_URL" == https://* ]]; then
+            curl --fail --location --retry 2 --proto '=https' --proto-redir '=https' \
+              --max-filesize 104857600 --output "$SAMPLE" "$INPUT_URL"
+          else
+            echo "::error::Provide samples/ScreenWings.exe or workflow_dispatch sample_url (HTTPS)."
+            exit 1
+          fi
+          echo "${EXPECTED_SHA256}  ${SAMPLE}" | sha256sum --check --status || {
+            echo "::error::Input specimen SHA256 mismatch; refusing to analyze."
+            sha256sum "$SAMPLE"
+            exit 1
+          }
+          stat -c '%n %s bytes' "$SAMPLE" | tee analysis/rea/source_size.txt
+          sha256sum "$SAMPLE" | tee analysis/rea/source_sha256.txt
+      - name: Lossless raw PE sections, resources, overlay and evidence inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/pe_unpack.py "$SAMPLE" --out analysis/extracted
+          python -m json.tool analysis/extracted/manifest.json >/dev/null
+      - name: Install REA 6.4.0 and Ghidra 12.1.4
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global rea-agents@6.4.0
+          curl --fail --location --retry 2 --output "$RUNNER_TEMP/ghidra.zip" \
+            "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip"
+          unzip -q "$RUNNER_TEMP/ghidra.zip" -d "$RUNNER_TEMP"
+          GHIDRA_HOME="$RUNNER_TEMP/ghidra_12.1.4_PUBLIC"
+          test -f "$GHIDRA_HOME/support/analyzeHeadless"
+          echo "GHIDRA_INSTALL_DIR=$GHIDRA_HOME" >> "$GITHUB_ENV"
+          rea --version
+      - name: REA read-only static analysis (packed program)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          rea doctor --provider ghidra --json > analysis/rea/doctor.json 2>analysis/rea/doctor.stderr.txt
+          echo $? > analysis/rea/doctor.exitcode
+          rea analyze "$SAMPLE" --provider ghidra --json > analysis/rea/overview.json 2>analysis/rea/overview.stderr.txt
+          echo $? > analysis/rea/overview.exitcode
+          # These searches are probes, not claims of resolved call paths.
+          for query in SetWindowDisplayAffinity GetProcAddress CreateWindowExW BitBlt; do
+            rea search "$SAMPLE" "$query" --provider ghidra --json > "analysis/rea/search_${query}.json" 2> "analysis/rea/search_${query}.stderr.txt"
+            echo $? > "analysis/rea/search_${query}.exitcode"
+          done
+          rea decompile "$SAMPLE" 0xB04108 --provider ghidra --json > analysis/rea/entrypoint.json 2>analysis/rea/entrypoint.stderr.txt
+          echo $? > analysis/rea/entrypoint.exitcode
+          exit 0
+      - name: Build offline archive
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p analysis
+          if [[ -f analysis/extracted/manifest.json ]]; then
+            (cd analysis && zip -qr "$RUNNER_TEMP/screenwings-pe-raw.zip" extracted rea)
+            cp "$RUNNER_TEMP/screenwings-pe-raw.zip" analysis/screenwings-pe-raw.zip
+          fi
+      - name: Upload research archive and REA logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenwings-research
+          path: analysis/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Commit raw extracted artifacts to this repository
+        if: ${{ success() && github.event_name == 'workflow_dispatch' && inputs.publish_extracted }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$(find analysis/extracted analysis/rea -type f -size +95M -print -quit)" ]]; then
+            echo "::warning::Large files not committed; download artifact instead."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f analysis/extracted analysis/rea
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+          else
+            git commit -m "research: extract ScreenWings PE and collect REA evidence"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
