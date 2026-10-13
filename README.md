@@ -17,7 +17,7 @@ The target has a high-entropy `.boot` section with its entry point inside an app
 
 ## Usage
 
-The specimen is not redistributed by default. Provide your legally obtained specimen at `samples/ScreenWings.exe`, or run the GitHub Actions workflow. The workflow now attempts the historical vendor download (EXE or ZIP), verifies the exact SHA-256, and fails closed if the historical version is unavailable. The specimen is never executed.
+The specimen is not redistributed by default. Provide your legally obtained specimen at `samples/ScreenWings.exe`, or run the GitHub Actions workflow. A workflow can accept an explicitly provided HTTPS direct download URL, but will not silently use the historical vendor endpoint: Actions run #4 confirmed it did not deliver a valid EXE/ZIP. All supplied samples are pinned to their exact SHA-256. The specimen is never executed.
 
 ```bash
 python3 tools/resolve_sample.py --sample samples/ScreenWings.exe
@@ -56,3 +56,29 @@ After a verified sample is available, use the workflow's manual run with `publis
 ## Capture-prevention function-level validation
 
 The verified static stage-one control flow and read-only Windows instrumentation are documented in [runtime capture validation](docs/runtime-capture-validation.md). Run `tools/observe_windows.py` and optional `tools/capture_trace.frida.js` only in a disposable Windows VM. These tools can correlate owned HWNDs, `WDA_MONITOR`/other flags, topmost/layered windows, and dynamic API resolution; **there is still no first-hand runtime proof that this version calls `SetWindowDisplayAffinity`**.
+
+## Complete research package, release upload, and reproducing the static data
+
+The original **34-file offline research ZIP** is 19,965,016 bytes, SHA-256:
+`2ef547e00335c475bdca13c2df6360de2bb7c5ec1cccafcde3ff55b78f5e9287`.
+It includes the original specimen, unpacked `schiffer` section, analysis-only reconstructed PE, embedded Oreans helper, raw sections/resources, strings, disassemblies, scripts, and full file manifest.
+
+For a one-command public GitHub Release publication after obtaining redistribution permission:
+
+```powershell
+pwsh -File .\tools\publish_research.ps1 -Archive "C:\path\ScreenWings_Actions_Fix_Runtime_Research_20261013.zip" -ConfirmRedistributionRights
+```
+
+To also publish **all 34 extracted files individually** under `research/2026-10-13-stage1/`, add `-PublishExpandedFiles`. The script verifies the archive, original EXE, and restored section SHA-256 before touching the GitHub repository. The connected GitHub application cannot transfer the user's local ZIP bytes directly: do not interpret a commit of scripts or reports as confirmation that the ZIP/release has been published.
+
+Alternatively, [Package ScreenWings Stage-1 Research](.github/workflows/package-research.yml) re-creates a complete ZIP as a GitHub Actions artifact **after** receiving an authorized specimen in `samples/ScreenWings.exe` or an explicit direct HTTPS URL with the exact matching checksum. Public GitHub Releases are opt-in and require a redistribution confirmation.
+
+## Isolated Windows VM collection (unverified until actual measurement)
+
+The offline VM helper `tools/collect_runtime_evidence.ps1` captures protection **OFF** and **ON** HWND/affinity snapshots, environment build information, before/after deltas, and SHA-256 checksums to a ZIP without collecting desktop images. For a ScreenWings PID `1234`:
+
+```powershell
+pwsh -File .\tools\collect_runtime_evidence.ps1 -TargetPid 1234
+```
+
+The optional Frida tracer `tools/capture_trace.frida.js` can complement this with arguments to `SetWindowDisplayAffinity`, `CreateWindowEx`, `SetWindowPos`, and `GetProcAddress`. **No runtime VM logs have been collected in this environment** and there is no function-level proof of the exact anti-screenshot implementation yet. See [runtime methodology](docs/runtime-capture-validation.md).
