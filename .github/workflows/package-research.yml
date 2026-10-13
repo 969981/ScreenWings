@@ -51,6 +51,7 @@ jobs:
           python tools/scan_stage2_thunk_consumers.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2-consumers
           python tools/extract_stage2_reloc1267.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2_reloc1267
           python tools/verify_stage2_dispatch.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2_reloc1267/dispatch_verified.json
+          python tools/verify_stage2_ret_dispatch.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2_reloc1267/ret_dispatch_verified.json
           test "$(sha256sum analysis/stage1/schiffer_stage1.bin | cut -d' ' -f1)" = "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420"
       - name: Extract readable disassembly without executing the sample
         shell: bash
