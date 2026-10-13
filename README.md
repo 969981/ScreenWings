@@ -144,3 +144,28 @@ A bounded subset model tracked 852 instruction/thunk steps, 32 context writes an
 - [Bounded model results and assumptions](analysis/p0_stage2_handoff_trace.json)
 
 Both Actions workflows now run the P0 verifier after prior stage-two steps, **only if the exact-matching specimen is available**. No native ScreenWings runtime log, original OEP, executable page decryption or screenshot-protection API has been confirmed.
+
+
+## 2026-10-13 P0 follow-up: precisely locate the model's bogus 0x18 pointer
+
+The previous **0x53D2EF** model cutoff is now data-flow explained, not merely reported. With the exact first-stage image SHA and the *37 recorded writes from the bounded x86 research model*, EAX is conditionally calculated as:
+
+```text
+0x5C3000: 0x7AEC651F - [CTX+0x7E]=0xE8480977 -> 0x92A45BA8
+0x5C3033: 0x92A45BA8 - [CTX+0x09]=0x92A45B90 -> 0x18
+0x5C30B8: [CTX+0x7A] <- 0x18
+0x5C3118: ESI <- [CTX+0x7A] = 0x18
+0x5C3123: [CTX+0x3B] <- 0x18
+0x53D2ED: EDI <- [CTX+0x3B] = 0x18
+0x53D2EF: EDI <- [EDI=0x18] -> unmapped in the research model
+```
+
+This **rules out one prior guess:** the model does **not** merely fail to initialize the `CTX+0x3B` field. The model explicitly writes `0x18` into that field, so the remaining problem is *model/runtime divergence upstream*, a possible incorrect state seed/branch, or missing protection semantics—not a proven native failure or original application entry.
+
+- [Source-byte and 37-write provenance validator](tools/diagnose_p0_edi_provenance.py)
+- [All model memory writes (37 rows)](analysis/p0_model_memory_writes.csv)
+- [Structured provenance result](analysis/p0_edi_provenance.json)
+- [Detailed analysis](docs/p0-edi-pointer-provenance.md)
+- [Exact four-address WinDbg VM investigation using hardware execution breakpoints](docs/p0-windbg-native-probe.md)
+
+The two CI workflows recheck this **committed model fixture** against the exact restored section; they do *not* claim new native Windows trace results. The current Linux environment still has no native ScreenWings process or Windows VM.
