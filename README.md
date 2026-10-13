@@ -103,3 +103,16 @@ A static reconstruction extended the 20-instruction bootstrap into its initializ
 - Every rebased address begins with an `E9 rel32` x86 near jump, and **all 43** resolve to **distinct `PUSHF` landing blocks**. **21** pairs of neighboring thunk locations differ by exactly 5 bytes.
 
 The 43-row dataset is checked into [analysis/stage2_jump_thunks.csv](analysis/stage2_jump_thunks.csv), together with [the byte-validating extractor](tools/extract_stage2_jump_thunks.py) and [technical write-up](docs/stage2-jump-thunk-table.md). CI has been updated to regenerate these files only when an authorized exact-match sample is available. This is a discovery of a protected control-flow structure, **not proof** of a screenshot-blocking API.
+
+
+## 2026-10-13: 43-thunk inbound-consumer analysis
+
+Byte-verified sorting reveals **19 physical clusters** (3 groups of four E9 thunks, 15 pairs, 1 singleton), not 43 independent functions. **13 cluster heads** follow `FF E0..E7` indirect `JMP reg` instructions, and all thirteen share a `+0x22` memory-update template before the jump.
+
+A read-only whole-section scan did **not** identify a validated direct relative branch *into* the 43 thunk addresses. Two short-Jcc candidate byte sequences are not established callers (one is inside an immediate operand; the other is apparent data). These negative results do not eliminate dynamically constructed indirect transfers.
+
+- [19 physical clusters CSV](analysis/stage2_thunk_clusters.csv)
+- [Read-only raw candidate scanner](tools/scan_stage2_thunk_consumers.py)
+- [Detailed 43-entry consumer investigation](docs/stage2-thunk-consumers.md)
+
+Both Actions workflows have been updated to run this scanner once they receive a matching original specimen. No Windows VM capture or verified user32 call trace is available.
