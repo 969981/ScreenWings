@@ -82,3 +82,13 @@ pwsh -File .\tools\collect_runtime_evidence.ps1 -TargetPid 1234
 ```
 
 The optional Frida tracer `tools/capture_trace.frida.js` can complement this with arguments to `SetWindowDisplayAffinity`, `CreateWindowEx`, `SetWindowPos`, and `GetProcAddress`. **No runtime VM logs have been collected in this environment** and there is no function-level proof of the exact anti-screenshot implementation yet. See [runtime methodology](docs/runtime-capture-validation.md).
+
+## 2026-10-13: independently executed stage-two STATIC trace
+
+Ran the local first-stage bytes through a bounded, no-execution branch tracer. The 20 decoded instructions reconstruct `EBP=0x492000` (restored `schiffer` base) and `EAX=0x400000` (PE image base), through two call/pop/sub address calculations and direct jumps. The trace stops at `0x7B06A8` on an unmodeled `pushf`/stack-manipulation sequence instead of inventing deeper control flow.
+
+- [Reproducible Python tracer](tools/trace_stage2_bootstrap.py)
+- [Stage-two bootstrap report and runtime caveats](docs/stage2-bootstrap-static-analysis.md)
+- [Windows VM validation method](docs/runtime-capture-validation.md)
+
+**Not a runtime proof:** this execution environment is Linux and does not offer a Windows VM or access to a running ScreenWings process. No actual HWND, `SetWindowDisplayAffinity` flag, user32 caller or screen capture result has been collected. A matching negative static API string scan cannot disprove dynamic API resolution.
