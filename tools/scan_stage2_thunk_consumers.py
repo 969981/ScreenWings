@@ -100,10 +100,23 @@ def inspect(data):
                 if not TABLE-BASE<=p<TABLE-BASE+4*COUNT:outside.append(f"0x{BASE+p:08X}")
                 start=p+1
         return dict(total=count,outside_table=outside)
+    # Frequency control: this template may be general protector boilerplate.
+    # These are byte hits, not independently decoded/reachable instructions.
+    global_jmp_reg_candidates=0
+    global_plus22_memadd_jmp_candidates=0
+    for pos in range(16,len(data)-1):
+        if data[pos]==0xff and 0xe0<=data[pos+1]<=0xe7:
+            global_jmp_reg_candidates+=1
+            if data[pos-2]==0x01 and b"\x22\x00\x00\x00" in data[pos-14:pos-2]:
+                global_plus22_memadd_jmp_candidates+=1
+    if (global_jmp_reg_candidates,global_plus22_memadd_jmp_candidates)!=(3645,1167):
+        raise ValueError("Unexpected global protection-template frequency")
     report=dict(image_sha256=SHA256,table=f"0x{TABLE:08X}",entry_count=43,
       clusters=groups,cluster_sizes=shapes,
       clusters_preceded_by_jmp_reg=sum(x["immediately_after_jmp_reg"] for x in groups),
       clusters_with_add22_write_then_indirect_jump=sum(x["add22_memory_update_jump_pattern"] for x in groups),
+      global_raw_ff_e0_to_e7_candidate_count=global_jmp_reg_candidates,
+      global_raw_add22_memory_add_jump_candidate_count=global_plus22_memadd_jmp_candidates,
       relative_branch_raw_candidates=branches,
       counts=dict(collections.Counter(x["classification"] for x in branches)),
       literal_pointer_search={
