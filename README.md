@@ -197,3 +197,24 @@ These have the correct x86 SEH registration stack layout: `[ESP]=previous head` 
 - [Technical proof criteria, 4-breakpoint phases, and gn vs gh](docs/p0-seh-registration-chains-and-native-proof.md)
 
 Both stage-one CI workflows now invoke the byte validator once a correct specimen has been provided. No Windows VM run, original business OEP, or `SetWindowDisplayAffinity` call is claimed.
+
+
+## 2026-10-14: P0 real-AV/SEH capture preflight passed on GitHub Actions
+
+**Verified original PE header:** ScreenWings.exe (PE32 x86) declares DLL characteristics 0x8060, including **DYNAMIC_BASE / ASLR**. Thus the documented preferred ImageBase 0x400000 is not a safe hard-coded runtime address; all target EIPs must be rebased from the live WinDbg lm m ScreenWings output. Exact source hashes and fields are in [analysis/p0_pe_header_preflight.json](analysis/p0_pe_header_preflight.json).
+
+New scripts:
+- [tools/make_p0_av_proof.py](tools/make_p0_av_proof.py): requires --runtime-base; emits four-breakpoint SEH install and pointer-path phases with in-memory instruction-byte preflight, plus an independent first/second-chance AV logger.
+- [tools/triage_p0_windbg.py](tools/triage_p0_windbg.py): parses tagged **real** WinDbg logs conservatively, never treating missing events as evidence of missing protection.
+- [docs/p0-seh-registration-chains-and-native-proof.md](docs/p0-seh-registration-chains-and-native-proof.md): full evidence protocol including first-chance gn, a handler execution breakpoint, and failure/recovery criteria.
+- [P0 cross-platform unit test workflow](.github/workflows/p0-av-probe-tests.yml).
+
+**CI result:** [P0 run 38491563087](https://github.com/969981/ScreenWings/actions/runs/38491563087) completed **successfully**, with both ubuntu-latest and windows-latest jobs passing unit tests, script generation and artifact upload. This only validates **Python/script generation** on the Windows runner; it does *not* run WinDbg against ScreenWings or prove an actual AV, SEH catch, native OEP, or SetWindowDisplayAffinity call.
+
+Start the VM procedure only after obtaining the actual image base:
+
+```powershell
+py -3 tools\make_p0_av_proof.py --runtime-base 0x500000 --out C:\Temp\p0probe
+```
+
+Here 0x500000 is **an example**, not a measured process base. In WinDbg run `lm m ScreenWings`, inspect the opcode bytes, load the generated AV-only file, collect the first-chance event, and use `gn` to allow application handlers if desired. The original target has **not been launched** in the analysis environment.
