@@ -1,0 +1,37 @@
+name: P0 WinDbg Probe Unit Tests
+
+on:
+  push:
+    paths:
+      - 'tools/make_p0_av_proof.py'
+      - 'tools/triage_p0_windbg.py'
+      - 'tests/test_p0_av_proof.py'
+      - '.github/workflows/p0-av-probe-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-cross-platform-preflight:
+    name: Python generation and parser tests (NOT native AV proof)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify P0 WinDbg script generation and synthetic-log classification
+        run: python -m unittest discover -s tests -p test_p0_av_proof.py -v
+      - name: Generate example probe scripts (not native ScreenWings execution)
+        run: python tools/make_p0_av_proof.py --runtime-base 0x500000 --out p0-demo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p0-probe-demo-${{ matrix.os }}
+          path: p0-demo/
+          retention-days: 7
