@@ -1,0 +1,15 @@
+{
+  "format": "PE32 x86",
+  "machine": "0x014c",
+  "preferred_imagebase": "0x00400000",
+  "size_of_image": "0x00aa0000",
+  "entry_rva": "0x00704108",
+  "dll_characteristics": "0x8060",
+  "dynamic_base_enabled": true,
+  "source_sha256": "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214",
+  "restored_sha256": "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420",
+  "native_windows_av_logs": "NONE",
+  "windows_debugger_script_native_test": "NOT RUN",
+  "ci_preflight_run": "https://github.com/969981/ScreenWings/actions/runs/38491563087",
+  "ci_prelight_scope": "Python generation/unit tests on ubuntu-latest and windows-latest; no WinDbg or ScreenWings sample execution"
+}
