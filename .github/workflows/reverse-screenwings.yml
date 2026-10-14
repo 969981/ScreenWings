@@ -98,6 +98,7 @@ jobs:
           # Re-check previously captured bounded-model writes; this does NOT recreate native VM traces.
           python tools/diagnose_p0_edi_provenance.py analysis/stage1/schiffer_stage1.bin analysis/p0_model_memory_writes.csv --out analysis/stage2_reloc1267/p0_edi_provenance_verified.json
           python tools/audit_p0_pointer_seh.py analysis/stage1/schiffer_stage1.bin analysis/p0_model_memory_writes.csv --out analysis/stage2_reloc1267/p0_seh_candidate_audit.json
+          python tools/verify_p0_seh_registration.py analysis/stage1/schiffer_stage1.bin --out analysis/stage2_reloc1267/p0_seh_registration_verified.json
           python -m json.tool analysis/stage2_thunks/stage2_jump_thunks.json >/dev/null
       - name: Install REA 6.4.0 and Ghidra 12.1.4
         shell: bash
