@@ -169,3 +169,15 @@ This **rules out one prior guess:** the model does **not** merely fail to initia
 - [Exact four-address WinDbg VM investigation using hardware execution breakpoints](docs/p0-windbg-native-probe.md)
 
 The two CI workflows recheck this **committed model fixture** against the exact restored section; they do *not* claim new native Windows trace results. The current Linux environment still has no native ScreenWings process or Windows VM.
+
+
+## 2026-10-14 P0: possible SEH-managed 0x18 dereference — NOT confirmed
+
+The previous bounded x86 model's stop at `0x53D2EF` is now more precisely explained. The modeled `WORD[CTX+0x66]=0x38F1`; real native instruction bytes encode `MOVZX EDI,WORD[EDI]`, `ADD DI,0xC74A`, then `ADD EDI,EBP`. **16-bit wrapping gives `(0x38F1+0xC74A)&0xFFFF=0x3B`**, so the first `MOV EDI,[EDI]` reads `CTX+0x3B`, yielding the modeled `0x18`, followed by a second dereference of that low address. The model's synthetic register/context assumptions remain unverified in a real Windows process.
+
+A new independent image scan also found **five** `PUSH FS:[0]` patterns, **five** `MOV FS:[0],ESP` patterns, **one** `MOV FS:[0],EAX` pattern, and **13** raw double-`MOV EDI,[EDI]` sequences. Two direct `PUSH FS:[0] → JMP next → MOV FS:[0],ESP` byte sequences at `0xAAA446` and `0xAD0E54` are especially interesting. These are **static candidate Windows x86 exception-chain instructions**, not proof the application registers an exception handler on the modeled path. A deliberately induced/caught `0x18` access violation is a *testable hypothesis*, not a result.
+
+- [Reproducible FS:[0] candidate and pointer-offset audit](tools/audit_p0_pointer_seh.py)
+- [P0 analysis, model flag audit and WinDbg first-chance-AV validation criteria](docs/p0-low-pointer-seh-hypothesis.md)
+
+Both Stage-1-dependent CI workflows can now regenerate the new pointer/SEH candidate audit from the same exact SHA-256 image. They still cannot supply a native Windows exception trace; no business OEP, anti-screenshot API call, or native SEH diversion has been proven.
