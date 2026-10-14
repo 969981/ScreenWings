@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-14",
+  "sample_sha256": "481ecd41bef2a33076729680747eb92e4e2964bed89c58825d80f602de19f214",
+  "restored_sha256": "2a1185bbcc93a049d413a71104ed41623bae61cf2412de5ea015564ea8b4d420",
+  "section_base": "0x492000",
+  "model_context": "0x4C19BC",
+  "audited_model_steps": 852,
+  "audited_model_writes": 37,
+  "model_opcode_counts": {
+    "mov": 279,
+    "movzx": 11,
+    "add": 187,
+    "sub": 95,
+    "xor": 96,
+    "or": 84,
+    "and": 84,
+    "cmp": 4,
+    "jbe": 3,
+    "shl": 3,
+    "push": 2,
+    "ret": 1,
+    "jmp": 1,
+    "inc": 0,
+    "dec": 0,
+    "shr": 0
+  },
+  "encoded_field_offset": {
+    "context_word_va": "0x4C1A22",
+    "model_word_value": "0x38F1",
+    "native_instruction_va": "0x53D2C3",
+    "add_di_immediate": "0xC74A",
+    "wrapped_di": "0x003B",
+    "first_pointer_va": "0x4C19F7",
+    "first_pointer_value_from_model": "0x00000018",
+    "second_pointer_deref_va": "0x00000018"
+  },
+  "fs_seh_pattern_candidates": {
+    "push_fs0": [
+      "0x8D19C1",
+      "0x9F1F05",
+      "0x9F4F2D",
+      "0xAAA446",
+      "0xAD0E54"
+    ],
+    "mov_fs0_esp": [
+      "0x8BF357",
+      "0x9E37D9",
+      "0x9F2B1D",
+      "0xAAA452",
+      "0xAD0E60"
+    ],
+    "mov_fs0_eax": [
+      "0xAE0B6D"
+    ],
+    "direct_push_fs0_jmp_next_mov_fs0_esp": [
+      [
+        "0xAAA446",
+        "0xAAA44D",
+        "0xAAA452"
+      ],
+      [
+        "0xAD0E54",
+        "0xAD0E5B",
+        "0xAD0E60"
+      ]
+    ],
+    "double_mov_edi_edi_count": 13
+  },
+  "evidence_scope": "SHA-locked static x86 bytes and conditional x86 subset model. Raw pattern matches may be unreachable code/data.",
+  "not_proven": [
+    "Real Windows AV at 0x53D2EF",
+    "SEH handling that AV",
+    "protector virtual machine exit",
+    "original application OEP",
+    "SetWindowDisplayAffinity actual call or flags"
+  ],
+  "reproduce": "python3 tools/audit_p0_pointer_seh.py analysis/stage1/schiffer_stage1.bin analysis/p0_model_memory_writes.csv --out analysis/p0_pointer_seh_audit.json"
+}
