@@ -181,3 +181,19 @@ A new independent image scan also found **five** `PUSH FS:[0]` patterns, **five*
 - [P0 analysis, model flag audit and WinDbg first-chance-AV validation criteria](docs/p0-low-pointer-seh-hypothesis.md)
 
 Both Stage-1-dependent CI workflows can now regenerate the new pointer/SEH candidate audit from the same exact SHA-256 image. They still cannot supply a native Windows exception trace; no business OEP, anti-screenshot API call, or native SEH diversion has been proven.
+
+
+## 2026-10-14 P0: SEH registration paths independently reconstructed
+
+Re-examining the first-stage SHA-256 image recovered **two complete x86 SEH-installation paths**, both verified across four native E9 hops:
+
+- **A:** `0xAC7032 LEA EAX,[EBP+0x2D910E]` → `0xA5528B PUSH EAX` → `0xAAA446 PUSH FS:[0]` → `0xAAA452 MOV FS:[0],ESP` → `0xAC701C`.
+- **B:** `0xAAAE7E LEA EAX,[EBP+0x2871BE]` → `0xAC9102 PUSH EAX` → `0xAD0E54 PUSH FS:[0]` → `0xAD0E60 MOV FS:[0],ESP` → `0xAB8158`.
+
+These have the correct x86 SEH registration stack layout: `[ESP]=previous head` and `[ESP+4]=handler`. Absolute handler addresses require **real EBP values** at the LEA sites; there is still **no proof that either sequence executes before the model's 0x53D2EF dereference or that it handles that fault**. The 1267-item table's known E9 destinations are below `0x621E20`, whereas both SEH install sites are above `0xAAA000`; there is no *direct table landing* at either installation site.
+
+- [P0 exact-byte chain verifier](tools/verify_p0_seh_registration.py)
+- [Windows-only native WinDbg probe generator](tools/make_p0_windbg_probe.py)
+- [Technical proof criteria, 4-breakpoint phases, and gn vs gh](docs/p0-seh-registration-chains-and-native-proof.md)
+
+Both stage-one CI workflows now invoke the byte validator once a correct specimen has been provided. No Windows VM run, original business OEP, or `SetWindowDisplayAffinity` call is claimed.
